@@ -127,12 +127,7 @@ issue-tracker/
 - `POST /api/issues` - Create a new issue
 - `PUT /api/issues/<id>` - Update an existing issue
 
-## License
+## Owner
+mulalo masithembi
 
-This project is open source and available under the [MIT License](LICENSE).
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-# Issue-Tracker
-A small app to keep track of tasks or problems.
