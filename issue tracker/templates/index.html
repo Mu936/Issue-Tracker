@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .issue-card {
+            transition: all 0.2s ease;
+        }
+        .issue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Issue Tracker</h1>
+            <p class="text-gray-600">Track and manage your project issues</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- New Issue Form -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Create New Issue</h2>
+                    <form id="issueForm" class="space-y-4">
+                        <div>
+                            <label for="title" class="block text-sm font-medium text-gray-700">Title*</label>
+                            <input type="text" id="title" name="title" required 
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea id="description" name="description" rows="3"
+                                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                            <select id="priority" name="priority" 
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                        <button type="submit" 
+                                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Create Issue
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Issues List -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold">Issues</h2>
+                            <div id="activeFilters" class="flex items-center space-x-2">
+                                <!-- Active filters will be shown here -->
+                            </div>
+                        </div>
+                        <div class="mt-2 space-y-2">
+                            <div class="flex space-x-2">
+                                <button onclick="filterByStatus('all')" id="status-all" class="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800 border-2 border-blue-200">All</button>
+                                <button onclick="filterByStatus('Open')" id="status-open" class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800 border-2 border-green-200">Open</button>
+                                <button onclick="filterByStatus('In Progress')" id="status-in-progress" class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-800 border-2 border-yellow-200">In Progress</button>
+                                <button onclick="filterByStatus('Closed')" id="status-closed" class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-800 border-2 border-gray-200">Closed</button>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="filterByPriority('all')" id="priority-all" class="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800 border-2 border-blue-200">All Priorities</button>
+                                <button onclick="filterByPriority('High')" id="priority-high" class="px-3 py-1 text-sm rounded-full bg-red-100 text-red-800 border-2 border-red-200">High</button>
+                                <button onclick="filterByPriority('Medium')" id="priority-medium" class="px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-800 border-2 border-yellow-200">Medium</button>
+                                <button onclick="filterByPriority('Low')" id="priority-low" class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800 border-2 border-green-200">Low</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="issuesList" class="divide-y divide-gray-200">
+                        <!-- Issues will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variable to store all issues
+        let allIssues = [];
+
+        // DOM Elements
+        const issueForm = document.getElementById('issueForm');
+        const issuesList = document.getElementById('issuesList');
+
+        // Event Listeners
+        issueForm.addEventListener('submit', handleSubmit);
+        document.addEventListener('DOMContentLoaded', fetchIssues);
+
+        // Fetch all issues
+        async function fetchIssues() {
+            try {
+                const response = await fetch('/api/issues');
+                allIssues = await response.json();
+                renderIssues(allIssues);
+            } catch (error) {
+                console.error('Error fetching issues:', error);
+            }
+        }
+
+        // Handle form submission
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(issueForm);
+            const issueData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                priority: formData.get('priority')
+            };
+
+            try {
+                const response = await fetch('/api/issues', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(issueData)
+                });
+
+                if (response.ok) {
+                    issueForm.reset();
+                    fetchIssues();
+                }
+            } catch (error) {
+                console.error('Error creating issue:', error);
+            }
+        }
+
+        // Update issue status
+        async function updateIssueStatus(issueId, newStatus) {
+            try {
+                await fetch(`/api/issues/${issueId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                fetchIssues();
+            } catch (error) {
+                console.error('Error updating issue status:', error);
+            }
+        }
+
+        // Current filters
+        let currentStatusFilter = 'all';
+        let currentPriorityFilter = 'all';
+
+        // Filter issues by status
+        function filterByStatus(status) {
+            currentStatusFilter = status;
+            applyFilters();
+        }
+
+        // Filter issues by priority
+        function filterByPriority(priority) {
+            currentPriorityFilter = priority;
+            applyFilters();
+        }
+
+        // Apply both status and priority filters
+        function applyFilters() {
+            let filteredIssues = [...allIssues];
+            
+            // Apply status filter
+            if (currentStatusFilter !== 'all') {
+                filteredIssues = filteredIssues.filter(issue => issue.status === currentStatusFilter);
+            }
+            
+            // Apply priority filter
+            if (currentPriorityFilter !== 'all') {
+                filteredIssues = filteredIssues.filter(issue => issue.priority === currentPriorityFilter);
+            }
+            
+            // Update active filter buttons
+            updateActiveFilters();
+            renderIssues(filteredIssues);
+        }
+        
+        // Update active filter buttons and show active filters
+        function updateActiveFilters() {
+            // Reset all status buttons
+            document.querySelectorAll('[id^="status-"]').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-1');
+            });
+            
+            // Highlight active status filter
+            const activeStatusBtn = document.getElementById(`status-${currentStatusFilter.toLowerCase().replace(' ', '-')}`);
+            if (activeStatusBtn) {
+                activeStatusBtn.classList.add('ring-2', 'ring-offset-1');
+            } else {
+                document.getElementById('status-all').classList.add('ring-2', 'ring-offset-1');
+            }
+            
+            // Reset all priority buttons
+            document.querySelectorAll('[id^="priority-"]').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-1');
+            });
+            
+            // Highlight active priority filter
+            const activePriorityBtn = document.getElementById(`priority-${currentPriorityFilter.toLowerCase()}`);
+            if (activePriorityBtn) {
+                activePriorityBtn.classList.add('ring-2', 'ring-offset-1');
+            } else {
+                document.getElementById('priority-all').classList.add('ring-2', 'ring-offset-1');
+            }
+            
+            // Update active filters display
+            const activeFiltersContainer = document.getElementById('activeFilters');
+            activeFiltersContainer.innerHTML = '';
+            
+            // Add active status filter
+            if (currentStatusFilter !== 'all') {
+                const statusBadge = document.createElement('span');
+                statusBadge.className = 'flex items-center px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-200';
+                statusBadge.innerHTML = `
+                    <span>Status: ${currentStatusFilter}</span>
+                    <button onclick="clearFilter('status')" class="ml-1 text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                activeFiltersContainer.appendChild(statusBadge);
+            }
+            
+            // Add active priority filter
+            if (currentPriorityFilter !== 'all') {
+                const priorityBadge = document.createElement('span');
+                priorityBadge.className = 'flex items-center px-2 py-1 text-xs rounded-full bg-purple-50 text-purple-700 border border-purple-200';
+                priorityBadge.innerHTML = `
+                    <span>Priority: ${currentPriorityFilter}</span>
+                    <button onclick="clearFilter('priority')" class="ml-1 text-purple-500 hover:text-purple-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                activeFiltersContainer.appendChild(priorityBadge);
+            }
+            
+            // Add clear all button if any filter is active
+            if (currentStatusFilter !== 'all' || currentPriorityFilter !== 'all') {
+                const clearButton = document.createElement('button');
+                clearButton.className = 'flex items-center px-2 py-1 text-xs text-gray-600 hover:text-gray-800';
+                clearButton.innerHTML = `
+                    <i class="fas fa-times-circle mr-1"></i>
+                    <span>Clear all</span>
+                `;
+                clearButton.onclick = clearAllFilters;
+                activeFiltersContainer.appendChild(clearButton);
+            }
+        }
+        
+        // Clear a specific filter
+        function clearFilter(filterType) {
+            if (filterType === 'status') {
+                filterByStatus('all');
+            } else if (filterType === 'priority') {
+                filterByPriority('all');
+            }
+        }
+        
+        // Clear all filters
+        function clearAllFilters() {
+            filterByStatus('all');
+            filterByPriority('all');
+        }
+
+        // Render issues to the DOM
+        function renderIssues(issues) {
+            issuesList.innerHTML = '';
+            
+            if (issues.length === 0) {
+                issuesList.innerHTML = '<div class="p-4 text-center text-gray-500">No issues found</div>';
+                return;
+            }
+
+            issues.forEach(issue => {
+                const issueElement = document.createElement('div');
+                issueElement.className = `issue-card p-4 hover:bg-gray-50 flex justify-between items-start ${getPriorityClass(issue.priority)}`;
+                
+                const statusColors = {
+                    'Open': 'bg-green-100 text-green-800',
+                    'In Progress': 'bg-yellow-100 text-yellow-800',
+                    'Closed': 'bg-gray-100 text-gray-800'
+                };
+
+                issueElement.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-medium text-lg">${escapeHtml(issue.title)}</h3>
+                            <span class="text-xs px-2 py-1 rounded-full ${statusColors[issue.status] || 'bg-gray-100'}">
+                                ${issue.status}
+                            </span>
+                        </div>
+                        ${issue.description ? `<p class="mt-1 text-gray-600 text-sm">${escapeHtml(issue.description)}</p>` : ''}
+                        <div class="mt-2 flex items-center text-xs text-gray-500">
+                            <span>#${issue.id}</span>
+                            <span class="mx-2">•</span>
+                            <span>${formatDate(issue.created_at)}</span>
+                            <span class="mx-2">•</span>
+                            <span class="font-medium">${issue.priority} Priority</span>
+                        </div>
+                    </div>
+                    <div class="ml-4 flex space-x-2">
+                        ${issue.status !== 'In Progress' ? 
+                            `<button onclick="updateIssueStatus(${issue.id}, 'In Progress')" class="p-1 text-yellow-600 hover:text-yellow-800" title="Mark as In Progress">
+                                <i class="fas fa-spinner"></i>
+                            </button>` : ''
+                        }
+                        ${issue.status !== 'Closed' ? 
+                            `<button onclick="updateIssueStatus(${issue.id}, 'Closed')" class="p-1 text-green-600 hover:text-green-800" title="Mark as Closed">
+                                <i class="fas fa-check"></i>
+                            </button>` : ''
+                        }
+                        ${issue.status !== 'Open' ? 
+                            `<button onclick="updateIssueStatus(${issue.id}, 'Open')" class="p-1 text-blue-600 hover:text-blue-800" title="Reopen">
+                                <i class="fas fa-redo"></i>
+                            </button>` : ''
+                        }
+                    </div>
+                `;
+                issuesList.appendChild(issueElement);
+            });
+        }
+
+        // Helper function to get priority class
+        function getPriorityClass(priority) {
+            const classes = {
+                'High': 'priority-high',
+                'Medium': 'priority-medium',
+                'Low': 'priority-low'
+            };
+            return classes[priority] || '';
+        }
+
+        // Helper function to format date
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
